@@ -49,7 +49,11 @@ const eventSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  image: {
+    url: String,
+    publicId: String
+  }
 }, {
   timestamps: true
 });

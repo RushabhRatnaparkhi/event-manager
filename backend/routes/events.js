@@ -3,14 +3,15 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const restrictGuest = require('../middleware/guestRestrictions');
 const eventsController = require('../controllers/eventsController');
+const { upload } = require('../config/cloudinary');
 
 // Public routes (available to all users including guests)
 router.get('/', auth, eventsController.getEvents);
 router.get('/:id', auth, eventsController.getEvent);
 
 // Protected routes (not available to guests)
-router.post('/', [auth, restrictGuest], eventsController.createEvent);
-router.put('/:id', [auth, restrictGuest], eventsController.updateEvent);
+router.post('/', [auth, restrictGuest, upload.single('image')], eventsController.createEvent);
+router.put('/:id', [auth, restrictGuest, upload.single('image')], eventsController.updateEvent);
 router.delete('/:id', [auth, restrictGuest], eventsController.deleteEvent);
 router.post('/:id/attend', [auth, restrictGuest], eventsController.attendEvent);
 router.post('/:id/unattend', [auth, restrictGuest], eventsController.unattendEvent);

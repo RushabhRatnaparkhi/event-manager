@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const socketUtil = require('../utils/socket');
+const { cloudinary } = require('../config/cloudinary');
 
 // Get all events
 const getEvents = async (req, res) => {
@@ -29,12 +30,16 @@ const getEvent = async (req, res) => {
   }
 };
 
-// Create event
+// Create event with image
 const createEvent = async (req, res) => {
   try {
     const newEvent = new Event({
       ...req.body,
-      creator: req.user.id
+      creator: req.user.id,
+      image: req.file ? {
+        url: req.file.path,
+        publicId: req.file.filename
+      } : null
     });
 
     const event = await newEvent.save();
@@ -45,7 +50,7 @@ const createEvent = async (req, res) => {
   }
 };
 
-// Update event
+// Update event with image
 const updateEvent = async (req, res) => {
   try {
     let event = await Event.findById(req.params.id);
@@ -53,16 +58,32 @@ const updateEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Make sure user owns event
     if (event.creator.toString() !== req.user.id) {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
+    // If there's a new image, delete the old one
+    if (req.file && event.image?.publicId) {
+      await cloudinary.uploader.destroy(event.image.publicId);
+    }
+
+    const updateData = {
+      ...req.body
+    };
+
+    if (req.file) {
+      updateData.image = {
+        url: req.file.path,
+        publicId: req.file.filename
+      };
+    }
+
     event = await Event.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true }
-    );
+    ).populate('attendees', 'name email')
+      .populate('creator', 'name email');
 
     res.json(event);
   } catch (err) {
@@ -71,7 +92,7 @@ const updateEvent = async (req, res) => {
   }
 };
 
-// Delete event
+// Delete event and image
 const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -79,9 +100,13 @@ const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Make sure user owns event
     if (event.creator.toString() !== req.user.id) {
       return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    // Delete image from Cloudinary if it exists
+    if (event.image?.publicId) {
+      await cloudinary.uploader.destroy(event.image.publicId);
     }
 
     await event.remove();

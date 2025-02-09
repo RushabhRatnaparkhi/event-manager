@@ -34,6 +34,7 @@ import {
   PersonRemove as PersonRemoveIcon,
   EventBusy as EventBusyIcon,
   Share as ShareIcon,
+  CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import api from '../../utils/axios.config';
 import { useAuth } from '../../contexts/AuthContext';
@@ -60,6 +61,10 @@ const EventDetails = () => {
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [editImage, setEditImage] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
+  const [uploadError, setUploadError] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const { id } = useParams();
   const { user } = useAuth();
@@ -133,13 +138,63 @@ const EventDetails = () => {
     }
   };
 
+  const validateImage = (file) => {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      return 'Invalid file type. Only JPG, JPEG, and PNG files are allowed';
+    }
+
+    if (file.size > maxSize) {
+      return 'File is too large. Maximum size is 5MB';
+    }
+
+    return null;
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const error = validateImage(file);
+      if (error) {
+        setUploadError(error);
+        setEditImage(null);
+        setEditImagePreview(null);
+        return;
+      }
+
+      setUploadError('');
+      setEditImage(file);
+      setEditImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleEditSubmit = async () => {
+    setEditLoading(true);
     try {
-      const response = await api.put(`/events/${id}`, editFormData);
+      const formData = new FormData();
+      Object.keys(editFormData).forEach(key => {
+        formData.append(key, editFormData[key]);
+      });
+
+      if (editImage) {
+        formData.append('image', editImage);
+      }
+
+      const response = await api.put(`/events/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       setEvent(response.data);
       setEditDialogOpen(false);
+      setEditImage(null);
+      setEditImagePreview(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update event');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -252,6 +307,20 @@ const EventDetails = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           {event.title}
         </Typography>
+        {event.image && (
+          <Box sx={{ mt: 2, mb: 4 }}>
+            <img
+              src={event.image.url}
+              alt={event.title}
+              style={{
+                width: '100%',
+                maxHeight: '400px',
+                objectFit: 'cover',
+                borderRadius: '8px'
+              }}
+            />
+          </Box>
+        )}
         <Typography variant="body1" paragraph>
           {event.description}
         </Typography>
@@ -399,11 +468,108 @@ const EventDetails = () => {
                 onChange={handleEditChange}
                 fullWidth
               />
+              {/* Image Upload Section */}
+              <Box sx={{ mt: 2, border: '1px dashed grey', p: 2, borderRadius: 1 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Event Image
+                </Typography>
+                
+                {/* Current Image Preview */}
+                {!editImagePreview && event.image && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" display="block" gutterBottom>
+                      Current Image:
+                    </Typography>
+                    <img
+                      src={event.image.url}
+                      alt="Current event"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'cover',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Image Upload Input */}
+                <input
+                  accept="image/jpeg,image/jpg,image/png"
+                  style={{ display: 'none' }}
+                  id="edit-image-upload"
+                  type="file"
+                  onChange={handleImageChange}
+                />
+                <label htmlFor="edit-image-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<CloudUploadIcon />}
+                    fullWidth
+                  >
+                    {event.image ? 'Change Image' : 'Upload Image'}
+                  </Button>
+                </label>
+
+                {uploadError && (
+                  <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
+                    {uploadError}
+                  </Typography>
+                )}
+
+                {/* New Image Preview */}
+                {editImagePreview && (
+                  <Box sx={{ mt: 2, position: 'relative' }}>
+                    <img
+                      src={editImagePreview}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'cover',
+                        borderRadius: '4px'
+                      }}
+                    />
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setEditImage(null);
+                        setEditImagePreview(null);
+                      }}
+                      sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'background.paper' }}
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                )}
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditSubmit} variant="contained">Save Changes</Button>
+            <Button 
+              onClick={() => {
+                setEditDialogOpen(false);
+                setEditImage(null);
+                setEditImagePreview(null);
+                setUploadError('');
+              }}
+              disabled={editLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEditSubmit} 
+              variant="contained"
+              disabled={editLoading}
+            >
+              {editLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
           </DialogActions>
         </Dialog>
 

@@ -9,6 +9,7 @@ import Register from './components/Auth/Register';
 import EventDashboard from './components/Events/EventDashboard';
 import EventCreate from './components/Events/EventCreate';
 import EventDetails from './components/Events/EventDetails';
+import CreateEvent from './components/Events/CreateEvent';
 
 const theme = createTheme({
   palette: {
@@ -64,11 +65,7 @@ function App() {
                 <EventDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/events/create" element={
-              <ProtectedRoute>
-                <EventCreate />
-              </ProtectedRoute>
-            } />
+            <Route path="/events/create" element={<CreateEvent />} />
             <Route path="/events/:id" element={
               <ProtectedRoute>
                 <EventDetails />
