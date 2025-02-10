@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
+    // Set strictQuery to true
+    mongoose.set('strictQuery', true);
+    
     await mongoose.connect(process.env.MONGODB_URI, {
       dbName: "Event-manager",
       useNewUrlParser: true,
