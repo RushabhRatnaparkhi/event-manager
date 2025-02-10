@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   Box,
+  CircularProgress,
 } from '@mui/material';
 import api from '../../utils/axios.config';
 
@@ -18,6 +19,7 @@ const Register = () => {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -33,11 +35,17 @@ const Register = () => {
       setError('Passwords do not match');
       return;
     }
+
+    setLoading(true);
+    setError('');
+
     try {
       await api.post('/auth/register', formData);
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,6 +64,7 @@ const Register = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           <TextField
             fullWidth
@@ -66,6 +75,7 @@ const Register = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           <TextField
             fullWidth
@@ -76,6 +86,7 @@ const Register = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           <TextField
             fullWidth
@@ -86,6 +97,7 @@ const Register = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           {error && (
             <Typography color="error" sx={{ mt: 2 }}>
@@ -98,8 +110,9 @@ const Register = () => {
             color="primary"
             fullWidth
             sx={{ mt: 3 }}
+            disabled={loading}
           >
-            Register
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
           </Button>
         </form>
       </Paper>
