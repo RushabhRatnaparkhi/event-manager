@@ -74,48 +74,47 @@ const EventDetails = () => {
     const fetchEvent = async () => {
       try {
         const response = await api.get(`/events/${id}`);
-        console.log('Event data:', response.data);
-        console.log('Current user:', user);
         setEvent(response.data);
         setAttending(response.data.attendees.some(
           attendee => attendee._id === user?.id
         ));
-        setEditFormData({
-          title: response.data.title,
-          description: response.data.description,
-          date: response.data.date.split('T')[0],
-          time: response.data.time,
-          location: response.data.location,
-          category: response.data.category,
-        });
-        console.log('Is owner:', response.data.creator._id === user?.id);
-        setLoading(false);
       } catch (err) {
         setError('Failed to fetch event details');
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     fetchEvent();
 
-    // Socket.IO setup
+    // Socket connection
     socket.connect();
     socket.emit('join-event', id);
 
-    // Listen for attendees updates
-    socket.on('attendees-updated', (updatedAttendees) => {
+    // Socket event listeners
+    socket.on('attendees-updated', (updatedEvent) => {
+      console.log('Received attendees update:', updatedEvent);
       setEvent(prev => ({
         ...prev,
-        attendees: updatedAttendees
+        attendees: updatedEvent.attendees
       }));
-      setAttending(updatedAttendees.some(
+      setAttending(updatedEvent.attendees.some(
         attendee => attendee._id === user?.id
       ));
+    });
+
+    socket.on('event-cancelled', (updatedEvent) => {
+      setEvent(updatedEvent);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
     });
 
     return () => {
       socket.emit('leave-event', id);
       socket.off('attendees-updated');
+      socket.off('event-cancelled');
+      socket.off('connect_error');
       socket.disconnect();
     };
   }, [id, user]);

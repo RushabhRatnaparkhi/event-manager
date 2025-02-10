@@ -136,12 +136,8 @@ const attendEvent = async (req, res) => {
       .populate('attendees', 'name email')
       .populate('creator', 'name email');
 
-    try {
-      const io = socketUtil.getIO();
-      io.to(`event-${event._id}`).emit('attendees-updated', updatedEvent.attendees);
-    } catch (socketErr) {
-      console.error('Socket error:', socketErr);
-    }
+    const io = socketUtil.getIO();
+    io.to(`event-${event._id}`).emit('attendees-updated', updatedEvent);
 
     res.json(updatedEvent);
   } catch (err) {
@@ -167,12 +163,8 @@ const unattendEvent = async (req, res) => {
       .populate('attendees', 'name email')
       .populate('creator', 'name email');
 
-    try {
-      const io = socketUtil.getIO();
-      io.to(`event-${event._id}`).emit('attendees-updated', updatedEvent.attendees);
-    } catch (socketErr) {
-      console.error('Socket error:', socketErr);
-    }
+    const io = socketUtil.getIO();
+    io.to(`event-${event._id}`).emit('attendees-updated', updatedEvent);
 
     res.json(updatedEvent);
   } catch (err) {
