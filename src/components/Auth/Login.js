@@ -9,6 +9,7 @@ import {
   Typography,
   Box,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import api from '../../utils/axios.config';
 
@@ -18,6 +19,7 @@ const Login = () => {
     password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -30,30 +32,37 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    
     try {
       const response = await api.post('/auth/login', formData);
       login(response.data.token);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGuestLogin = async () => {
+    setLoading(true);
+    setError('');
+    
     try {
-      console.log('Attempting guest login');
       const response = await api.post('/auth/guest-login');
-      console.log('Guest login response:', response);
       login(response.data.token);
       navigate('/');
     } catch (err) {
-      console.error('Guest login error:', err);
       setError(
         err.response?.data?.message || 
         err.response?.data?.error || 
         err.message || 
         'An error occurred during guest login'
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,6 +82,7 @@ const Login = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           <TextField
             fullWidth
@@ -83,6 +93,7 @@ const Login = () => {
             onChange={handleChange}
             margin="normal"
             required
+            disabled={loading}
           />
           {error && (
             <Typography color="error" sx={{ mt: 2 }}>
@@ -95,8 +106,9 @@ const Login = () => {
             color="primary"
             fullWidth
             sx={{ mt: 3 }}
+            disabled={loading}
           >
-            Login
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
           </Button>
         </form>
         
@@ -109,8 +121,9 @@ const Login = () => {
           color="secondary"
           fullWidth
           onClick={handleGuestLogin}
+          disabled={loading}
         >
-          Guest Login
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Guest Login'}
         </Button>
       </Paper>
     </Container>
