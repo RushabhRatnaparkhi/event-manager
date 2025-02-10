@@ -43,6 +43,8 @@ const createEvent = async (req, res) => {
     });
 
     const event = await newEvent.save();
+    const io = socketUtil.getIO();
+    io.emit('event-created', event);
     res.json(event);
   } catch (err) {
     console.error(err.message);
@@ -78,14 +80,16 @@ const updateEvent = async (req, res) => {
       };
     }
 
-    event = await Event.findByIdAndUpdate(
+    const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
       { new: true }
     ).populate('attendees', 'name email')
       .populate('creator', 'name email');
 
-    res.json(event);
+    const io = socketUtil.getIO();
+    io.emit('event-updated', updatedEvent);
+    res.json(updatedEvent);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ message: 'Server error' });
@@ -110,6 +114,8 @@ const deleteEvent = async (req, res) => {
     }
 
     await event.remove();
+    const io = socketUtil.getIO();
+    io.emit('event-deleted', event._id);
     res.json({ message: 'Event removed' });
   } catch (err) {
     console.error(err.message);
@@ -194,13 +200,8 @@ const cancelEvent = async (req, res) => {
       .populate('creator', 'name email');
 
     // Emit socket event for real-time update
-    try {
-      const io = socketUtil.getIO();
-      io.to(`event-${event._id}`).emit('event-cancelled', updatedEvent);
-    } catch (socketErr) {
-      console.error('Socket error:', socketErr);
-    }
-
+    const io = socketUtil.getIO();
+    io.emit('event-cancelled', updatedEvent);
     res.json(updatedEvent);
   } catch (err) {
     console.error(err.message);
