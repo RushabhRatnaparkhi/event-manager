@@ -52,17 +52,20 @@ const register = async (req, res) => {
 // Login user
 const login = async (req, res) => {
   try {
+    console.log('Login attempt for:', req.body.email);
     const { email, password } = req.body;
 
     // Check if user exists
     let user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('Invalid password for user:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -70,6 +73,7 @@ const login = async (req, res) => {
     const payload = {
       user: {
         id: user.id,
+        isGuest: user.isGuest
       },
     };
 
@@ -78,13 +82,17 @@ const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' },
       (err, token) => {
-        if (err) throw err;
+        if (err) {
+          console.error('JWT Sign error:', err);
+          throw err;
+        }
+        console.log('Login successful for:', email);
         res.json({ token });
       }
     );
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -103,9 +111,10 @@ const getCurrentUser = async (req, res) => {
 const guestLogin = async (req, res) => {
   try {
     console.log('Starting guest login process');
+    
     // Try to find an existing guest user
     let guestUser = await User.findOne({ email: 'guest@example.com' });
-    console.log('Existing guest user:', guestUser);
+    console.log('Existing guest user found:', !!guestUser);
 
     // If guest user doesn't exist, create one
     if (!guestUser) {
@@ -121,7 +130,7 @@ const guestLogin = async (req, res) => {
       });
 
       await guestUser.save();
-      console.log('New guest user created:', guestUser);
+      console.log('New guest user created');
     }
 
     // Create JWT token
@@ -141,7 +150,7 @@ const guestLogin = async (req, res) => {
           console.error('JWT Sign error:', err);
           throw err;
         }
-        console.log('Token generated successfully');
+        console.log('Guest login successful');
         res.json({ token });
       }
     );

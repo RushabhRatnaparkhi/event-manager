@@ -55,9 +55,16 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Debug middleware to log all requests
+// Add detailed request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  console.log('--------------------');
+  console.log('New Request:');
+  console.log('Time:', new Date().toISOString());
+  console.log('Method:', req.method);
+  console.log('Path:', req.path);
+  console.log('Body:', req.body);
+  console.log('Headers:', req.headers);
+  console.log('--------------------');
   next();
 });
 
@@ -70,10 +77,14 @@ app.get('/test', (req, res) => {
   res.json({ message: 'API is working' });
 });
 
-// Error handling middleware
+// Update error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: err.message || 'Server error occurred' });
+  console.error('Error occurred:', err);
+  console.error('Stack trace:', err.stack);
+  res.status(500).json({ 
+    message: err.message || 'Server error occurred',
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
 });
 
 // 404 handler
